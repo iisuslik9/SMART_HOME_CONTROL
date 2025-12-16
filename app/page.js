@@ -17,6 +17,13 @@ export default function Home() {
     return () => clearInterval(interval)
   }, [])
 
+useEffect(() => {
+    const timeInterval = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 1000)
+    return () => clearInterval(timeInterval)
+  }, [])
+  
   const fetchData = async () => {
     try {
       const { data: sensor } = await supabase
@@ -43,6 +50,24 @@ export default function Home() {
         <h1 className="text-5xl font-black text-center mb-12 bg-gradient-to-r from-white to-gray-200 bg-clip-text text-transparent drop-shadow-2xl">
           🏠 Умный дом
         </h1>
+        {/* Дата и время */}
+<div className="text-center mb-8">
+  <div className="text-2xl opacity-80 mb-1">
+    {currentTime.toLocaleDateString('ru-RU', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })}
+  </div>
+  <div className="text-4xl font-black bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent drop-shadow-lg">
+    {currentTime.toLocaleTimeString('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    })}
+  </div>
+</div>
 
         {/* Датчики */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
