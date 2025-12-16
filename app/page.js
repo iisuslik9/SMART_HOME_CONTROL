@@ -194,34 +194,34 @@ useEffect(() => {
         </div>
 
         {/* RGB + Зуммер */}
-        <div className="bg-white/10 backdrop-blur-xl p-8 rounded-3xl border border-white/20 shadow-2xl space-y-6">
-  <h3 className="text-2xl font-black bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
-    🌈 RGB Палитра
-  </h3>
-  
-  {/* Цветовая палитра */}
-  <div className="space-y-4">
-    <div className="flex flex-col items-center space-y-3">
-      <div 
-        className="w-32 h-32 rounded-2xl shadow-2xl border-4 border-white/30"
-        style={{
-          backgroundColor: `rgb(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b})`
-        }}
-      />
-      <div className="text-sm opacity-80 text-center">
-        rgb({rgbColor.r}, {rgbColor.g}, {rgbColor.b})
-      </div>
-    </div>
-    
-    {/* Палитра react-colorful */}
-    <div className="p-4 bg-white/5 rounded-2xl border border-white/20">
-      <RgbColorPicker 
-        color={rgbColor} 
-        onChange={updateRgbColor}
-      />
-    </div>
-  </div>
-</div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* 🌈 RGB ПАЛИТРА (НОВЫЙ КОМПОНЕНТ) */}
+          <div className="bg-white/10 backdrop-blur-xl p-8 rounded-3xl border border-white/20 shadow-2xl space-y-6">
+            <h3 className="text-2xl font-black bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
+              🌈 RGB Палитра
+            </h3>
+            
+            {/* Предпросмотр цвета */}
+            <div className="flex flex-col items-center space-y-4 mb-6">
+              <div 
+                className="w-28 h-28 md:w-32 md:h-32 rounded-2xl shadow-2xl border-4 border-white/30 hover:scale-105 transition-transform duration-200"
+                style={{
+                  backgroundColor: `rgb(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b})`
+                }}
+              />
+              <div className="text-lg opacity-90 font-mono bg-black/20 px-3 py-1 rounded-xl">
+                rgb({rgbColor.r}, {rgbColor.g}, {rgbColor.b})
+              </div>
+            </div>
+            
+            {/* Цветовая палитра */}
+            <div className="p-4 bg-white/5 rounded-2xl border border-white/20">
+              <RgbColorPicker 
+                color={rgbColor} 
+                onChange={updateRgbColor}
+              />
+            </div>
+          </div>
 
           
           <div className="bg-white/10 backdrop-blur-xl p-8 rounded-3xl border border-white/20 shadow-2xl">
