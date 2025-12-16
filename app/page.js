@@ -1,6 +1,8 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { RgbColorPicker } from 'react-colorful'
+
 
 export default function Home() {
   const [data, setData] = useState({})
@@ -11,6 +13,7 @@ export default function Home() {
     timer_hours: 0, timer_minutes: 30
   })
   const [currentTime, setCurrentTime] = useState(new Date())
+  const [rgbColor, setRgbColor] = useState({ r: 0, g: 0, b: 0 })
   
   useEffect(() => {
     fetchData()
@@ -24,6 +27,15 @@ useEffect(() => {
     }, 1000)
     return () => clearInterval(timeInterval)
   }, [])
+
+ // Синхронизируем rgbColor с controls из Supabase
+  useEffect(() => {
+    setRgbColor({
+      r: controls.rgb_r || 0,
+      g: controls.rgb_g || 0,
+      b: controls.rgb_b || 0
+    })
+  }, [controls.rgb_r, controls.rgb_g, controls.rgb_b])
   
   const fetchData = async () => {
     try {
@@ -43,6 +55,14 @@ useEffect(() => {
     const updates = { id: 1, [field]: value }
     await supabase.from('controls').upsert(updates)
     setControls(prev => ({ ...prev, [field]: value }))
+  }
+
+  const updateRgbColor = (color) => {
+    setRgbColor(color)
+    // Автоматически обновляем все 3 значения в Supabase
+    updateControl('rgb_r', color.r)
+    updateControl('rgb_g', color.g)
+    updateControl('rgb_b', color.b)
   }
 
   const renderTime = () => {
@@ -174,31 +194,35 @@ useEffect(() => {
         </div>
 
         {/* RGB + Зуммер */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-12">
-          <div className="bg-white/10 backdrop-blur-xl p-8 rounded-3xl border border-white/20 shadow-2xl space-y-6">
-            <h3 className="text-2xl font-black bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
-              🌈 RGB
-            </h3>
-            {['rgb_r', 'rgb_g', 'rgb_b'].map(color => (
-              <div key={color} className="space-y-3">
-                <label className="block text-lg font-semibold opacity-90 capitalize">
-                  {color.replace('rgb_', '')}
-                </label>
-                <div className="flex items-center gap-4">
-                  <input 
-                    type="range" 
-                    min="0" max="255" 
-                    value={controls[color] || 0}
-                    onChange={e => updateControl(color, +e.target.value)}
-                    className="flex-1 h-3 bg-white/20 rounded-xl appearance-none cursor-pointer accent-purple-400 hover:accent-purple-300 shadow-inner"
-                  />
-                  <span className="w-16 text-center font-mono text-xl font-black bg-white/10 px-4 py-2 rounded-xl border border-purple-500/30">
-                    {controls[color] || 0}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+        <div className="bg-white/10 backdrop-blur-xl p-8 rounded-3xl border border-white/20 shadow-2xl space-y-6">
+  <h3 className="text-2xl font-black bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
+    🌈 RGB Палитра
+  </h3>
+  
+  {/* Цветовая палитра */}
+  <div className="space-y-4">
+    <div className="flex flex-col items-center space-y-3">
+      <div 
+        className="w-32 h-32 rounded-2xl shadow-2xl border-4 border-white/30"
+        style={{
+          backgroundColor: `rgb(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b})`
+        }}
+      />
+      <div className="text-sm opacity-80 text-center">
+        rgb({rgbColor.r}, {rgbColor.g}, {rgbColor.b})
+      </div>
+    </div>
+    
+    {/* Палитра react-colorful */}
+    <div className="p-4 bg-white/5 rounded-2xl border border-white/20">
+      <RgbColorPicker 
+        color={rgbColor} 
+        onChange={updateRgbColor}
+      />
+    </div>
+  </div>
+</div>
+
           
           <div className="bg-white/10 backdrop-blur-xl p-8 rounded-3xl border border-white/20 shadow-2xl">
             <h3 className="text-2xl font-black bg-gradient-to-r from-red-400 to-rose-500 bg-clip-text text-transparent mb-8">
