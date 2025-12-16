@@ -53,6 +53,11 @@ useEffect(() => {
 
   const updateControl = async (field, value) => {
     const updates = { id: 1, [field]: value }
+    const { error } = await supabase.from('controls').upsert(updates)
+    if (error) {
+    console.error('SUPABASE ERROR:', error)  
+    return
+  }
     await supabase.from('controls').upsert(updates)
     setControls(prev => ({ ...prev, [field]: value }))
   }
