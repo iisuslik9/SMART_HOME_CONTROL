@@ -10,7 +10,8 @@ export default function Home() {
     strip: false, buzzer: false,
     timer_hours: 0, timer_minutes: 30
   })
-
+  const [currentTime, setCurrentTime] = useState(new Date())
+  
   useEffect(() => {
     fetchData()
     const interval = setInterval(fetchData, 2000)
@@ -42,6 +43,25 @@ useEffect(() => {
     const updates = { id: 1, [field]: value }
     await supabase.from('controls').upsert(updates)
     setControls(prev => ({ ...prev, [field]: value }))
+  }
+
+  const renderTime = () => {
+    if (!currentTime) return '00:00:00'
+    return currentTime.toLocaleTimeString('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    })
+  }
+
+  const renderDate = () => {
+    if (!currentTime) return '---'
+    return currentTime.toLocaleDateString('ru-RU', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
   }
 
   return (
