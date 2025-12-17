@@ -1,8 +1,13 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { RgbColorPicker } from 'react-colorful'
+//import { RgbColorPicker } from 'react-colorful'
+import dynamic from 'next/dynamic'
 
+const RgbColorPicker = dynamic(
+  () => import('react-colorful').then(mod => ({ default: mod.RgbColorPicker })),
+  { ssr: false, loading: () => <div className="h-64 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl animate-pulse" /> }
+)
 
 export default function Home() {
   const [data, setData] = useState({})
@@ -66,7 +71,7 @@ useEffect(() => {
     console.error('SUPABASE ERROR:', error)  
     return
   }
-    await supabase.from('controls').upsert(updates)
+    //await supabase.from('controls').upsert(updates)
     setControls(prev => ({ ...prev, [field]: value }))
   }
 
@@ -205,7 +210,7 @@ useEffect(() => {
 
         {/* RGB + Зуммер */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* 🌈 RGB ПАЛИТРА (НОВЫЙ КОМПОНЕНТ) */}
+          {/* 🌈 RGB ПАЛИТРА С ДИНАМИЧЕСКИМ ИМПОРТОМ */}
           <div className="bg-white/10 backdrop-blur-xl p-8 rounded-3xl border border-white/20 shadow-2xl space-y-6">
             <h3 className="text-2xl font-black bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
               🌈 RGB Палитра
@@ -224,13 +229,15 @@ useEffect(() => {
               </div>
             </div>
             
-            {/* Цветовая палитра */}
-            <div className="p-4 bg-white/5 rounded-2xl border border-white/20">
-              <RgbColorPicker 
-                color={rgbColor} 
-                onChange={updateRgbColor}
-              />
-            </div>
+            {/* ✅ ДИНАМИЧЕСКАЯ ПАЛИТРА - работает на Vercel! */}
+            {isClient && (
+              <div className="p-4 bg-white/5 rounded-2xl border border-white/20">
+                <RgbColorPicker 
+                  color={rgbColor} 
+                  onChange={updateRgbColor}
+                />
+              </div>
+            )}
           </div>
 
           
