@@ -180,7 +180,7 @@ useEffect(() => {
             <h3 className="text-2xl font-black bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
               💡 Светодиоды
             </h3>
-            {['led1', 'led2', 'led3'].map(led => (
+            {['first floor', 'second floor', 'lounge'].map(led => (
               <div key={led} className="space-y-3">
                 <label className="block text-lg font-semibold opacity-90 capitalize">{led}</label>
                 <div className="flex items-center gap-4">
