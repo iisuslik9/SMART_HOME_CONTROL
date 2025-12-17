@@ -180,23 +180,26 @@ useEffect(() => {
             <h3 className="text-2xl font-black bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
               💡 Светодиоды
             </h3>
-            {['first floor', 'second floor', 'lounge'].map(led => (
-              <div key={led} className="space-y-3">
-                <label className="block text-lg font-semibold opacity-90 capitalize">{led}</label>
-                <div className="flex items-center gap-4">
-                  <input 
-                    type="range" 
-                    min="0" max="255" 
-                    value={controls[led] || 0}
-                    onChange={e => updateControl(led, +e.target.value)}
-                    className="flex-1 h-3 bg-white/20 rounded-xl appearance-none cursor-pointer accent-yellow-400 hover:accent-yellow-300 shadow-inner"
-                  />
-                  <span className="w-16 text-center font-mono text-xl font-black bg-white/10 px-4 py-2 rounded-xl border border-yellow-500/30">
-                    {controls[led] || 0}
-                  </span>
-                </div>
-              </div>
-            ))}
+            {['led1', 'led2', 'led3'].map(led => (
+          <div key={led} className="space-y-3">
+            <label className="block text-lg font-semibold opacity-90 capitalize">
+              {led === 'led1' ? '1 этаж' : led === 'led2' ? '2 этаж' : 'Гостиная'}
+            </label>
+            <div className="flex items-center gap-4">
+              <input 
+                type="range" 
+                min="0" max="255" 
+                value={controls[led] || 0}
+                onChange={e => updateControl(led, +e.target.value)}
+                className="flex-1 h-3 bg-white/20 rounded-xl appearance-none cursor-pointer accent-yellow-400 hover:accent-yellow-300 shadow-inner"
+              />
+              <span className="w-16 text-center font-mono text-xl font-black bg-white/10 px-4 py-2 rounded-xl border border-yellow-500/30">
+                {controls[led] || 0}
+              </span>
+            </div>
+          </div>
+        ))}
+
           </div>
         </div>
 
