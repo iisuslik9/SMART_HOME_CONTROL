@@ -73,6 +73,12 @@ useEffect(() => {
   }
     //await supabase.from('controls').upsert(updates)
     setControls(prev => ({ ...prev, [field]: value }))
+    if (field === 'buzzer' && value === true) {
+        setTimeout(() => {
+          supabase.from('controls').upsert({ id: 1, buzzer: false })
+          setControls(prev => ({ ...prev, buzzer: false }))
+        }, 200);  // Кнопка гаснет через 200мс
+      }
   }
 
   const updateRgbColor = (color) => {
