@@ -269,7 +269,7 @@ const updateControl = async (field, value) => {
             {['led1', 'led2', 'led3'].map(led => (
           <div key={led} className="space-y-3">
             <label className="block text-lg font-semibold opacity-90 capitalize">
-              {led === 'led1' ? '1 этаж' : led === 'led2' ? '2 этаж' : 'Гостиная'}
+              {led === 'led1' ? '1 этаж' : led === 'led2' ? 'Гостинная' : '2 этаж'}
             </label>
             <div className="flex items-center gap-4">
               <input 
