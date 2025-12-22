@@ -1,7 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-//import { RgbColorPicker } from 'react-colorful'
 import dynamic from 'next/dynamic'
 
 const RgbColorPicker = dynamic(
@@ -16,12 +15,11 @@ export default function Home() {
     led1: 0, led2: 0, led3: 0,
     rgb_r: 0, rgb_g: 0, rgb_b: 0,
     strip: false, buzzer: false,
-    timer_hours: 0, timer_minutes: 30
+    timer_hours: null, timer_minutes: null
   })
   const [currentTime, setCurrentTime] = useState(new Date())
   const [rgbColor, setRgbColor] = useState({ r: 0, g: 0, b: 0 })
 
-  //const [currentTime, setCurrentTime] = useState(new Date())
 
   useEffect(() => {
     setIsClient(true)  // клиентский рендер
@@ -60,33 +58,73 @@ useEffect(() => {
         .from('controls').select('*').eq('id', 1)
       
       if (sensor?.[0]) setData(sensor[0])
-      if (ctrl?.[0]) setControls(prev => ({ ...prev, ...ctrl[0] }))
-    } catch (e) { console.error(e) }
+
+       if (ctrl?.[0]) {
+      // don't convert 0 -> null here — respect actual DB values
+      setControls(prev => ({ ...prev, ...ctrl[0] }))
+    }
+  } catch (e) { console.error(e) }
   }
 
-  const updateControl = async (field, value) => {
-    const updates = { id: 1, [field]: value }
-    const { error } = await supabase.from('controls').upsert(updates)
+const updateControl = async (field, value) => {
+  let validatedValue = value;
+
+  // preserve explicit null (user cleared the field => disabled)
+  if (field === 'timer_hours') {
+    if (validatedValue === null) {
+      // keep null -> means "disabled"
+    } else {
+      const n = Number(validatedValue);
+      validatedValue = Number.isNaN(n) ? null : Math.max(0, Math.min(23, n));
+    }
+  } else if (field === 'timer_minutes') {
+    if (validatedValue === null) {
+      // keep null
+    } else {
+      const n = Number(validatedValue);
+      validatedValue = Number.isNaN(n) ? null : Math.max(0, Math.min(59, n));
+    }
+  }
+
+  const updates = { id: 1, [field]: validatedValue };
+  const { data: returned, error } = await supabase
+    .from('controls')
+    .upsert(updates, { returning: 'representation' })
+    .select();
+
+  if (error) {
+    console.error('SUPABASE ERROR:', error);
+    return;
+  }
+
+  // merge returned row if available, otherwise merge our single-field update
+  if (returned?.[0]) {
+    setControls(prev => ({ ...prev, ...returned[0] }));
+  } else {
+    setControls(prev => ({ ...prev, [field]: validatedValue }));
+  }
+};
+
+  const updateRgbColor = async (color) => {
+    setRgbColor(color);
+
+    // Single batched upsert for all three channels
+    const updates = { id: 1, rgb_r: color.r, rgb_g: color.g, rgb_b: color.b };
+    const { data: returned, error } = await supabase
+      .from('controls')
+      .upsert(updates, { returning: 'representation' })
+      .select();
+
     if (error) {
-    console.error('SUPABASE ERROR:', error)  
-    return
-  }
-    //await supabase.from('controls').upsert(updates)
-    setControls(prev => ({ ...prev, [field]: value }))
-    if (field === 'buzzer' && value === true) {
-        setTimeout(() => {
-          supabase.from('controls').upsert({ id: 1, buzzer: false })
-          setControls(prev => ({ ...prev, buzzer: false }))
-        }, 200);  // Кнопка гаснет через 200мс
-      }
-  }
+      console.error('SUPABASE ERROR (RGB):', error);
+      return;
+    }
 
-  const updateRgbColor = (color) => {
-    setRgbColor(color)
-    // Автоматически обновляем все 3 значения в Supabase
-    updateControl('rgb_r', color.r)
-    updateControl('rgb_g', color.g)
-    updateControl('rgb_b', color.b)
+    if (returned?.[0]) {
+      setControls(prev => ({ ...prev, ...returned[0] }));
+    } else {
+      setControls(prev => ({ ...prev, ...updates }));
+    }
   }
 
   const renderTime = () => {
@@ -97,6 +135,37 @@ useEffect(() => {
       second: '2-digit'
     })
   }
+
+  const getStripStatus = () => {
+  // (strip_mode + timer_active)
+  const mode = data.strip_mode;
+  
+  if (mode === 'manual_off') return { 
+    text: '🖐️ ЛЕНТА ВЫКЛ (РУЧНОЕ)', 
+    color: 'bg-gray-600/50 hover:bg-gray-500/50 border-gray-400/50 text-gray-200'
+  }
+  if (data.timer_active) return { 
+    text: '⏳ ТАЙМЕР АКТИВЕН', 
+    color: 'bg-yellow-500/70 hover:bg-yellow-400/80 border-yellow-400/50 shadow-yellow-500/30'
+  }
+  if (controls.strip) return { 
+    text: '✅ ЛЕНТА ВКЛ', 
+    color: 'bg-emerald-500/70 hover:bg-emerald-400/80 border-emerald-400/50 shadow-emerald-500/30'
+  }
+  return { 
+    text: '❌ ЛЕНТА ВЫКЛ (авто)', 
+    color: 'bg-blue-500/50 hover:bg-blue-400/60 border-blue-400/50'
+  }
+}
+
+
+  const playBeepOnce = async () => {
+    await updateControl('buzzer', true)
+    // Авто-сброс через 500мс
+    setTimeout(() => updateControl('buzzer', false), 3000)
+  }
+
+  const timerDisplay = `${controls.timer_hours !== null && controls.timer_hours !== undefined ? controls.timer_hours : '--'}:${controls.timer_minutes !== null && controls.timer_minutes !== undefined ? String(controls.timer_minutes).padStart(2, '0') : '--'}`
 
   const renderDate = () => {
     if (!currentTime) return '---'
@@ -144,46 +213,52 @@ useEffect(() => {
         </div>
 
         {/* Управление */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Лента + Таймер */}
+         {/* ЛЕНТА + ТАЙМЕР - ОТДЕЛЬНЫЕ БЛОКИ */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {/* ✅ ЛЕНТА - ОСНОВНАЯ КНОПКА */}
           <div className="bg-white/10 backdrop-blur-xl p-8 rounded-3xl border border-white/20 shadow-2xl">
             <h3 className="text-2xl font-black mb-6 bg-gradient-to-r from-emerald-400 to-green-500 bg-clip-text text-transparent">
               🏠 Лента
             </h3>
             <button 
-              className={`w-full p-6 rounded-2xl text-xl font-black mb-6 transition-all duration-300 transform ${
-                controls.strip 
-                  ? 'bg-gradient-to-r from-emerald-500 to-green-600 shadow-2xl shadow-emerald-500/50 hover:scale-105 hover:shadow-3xl' 
-                  : 'bg-gray-700/50 hover:bg-gray-600/50 shadow-xl hover:shadow-2xl'
-              }`}
+              className={`w-full p-6 rounded-2xl text-xl font-black mb-6 transition-all duration-300 transform shadow-2xl hover:scale-105 hover:shadow-3xl border-4 ${getStripStatus().color}`}
               onClick={() => updateControl('strip', !controls.strip)}
             >
-              {controls.strip ? '✅ ВКЛ (таймер активен)' : '❌ ВЫКЛ'}
+              {getStripStatus().text}
             </button>
             
+            {/* ✅ Таймер настройки */}
             <div className="text-lg opacity-90 mb-6">
-              ⏰ Таймер: <span className="font-mono text-2xl font-black text-emerald-400">
-                {controls.timer_hours}:{controls.timer_minutes?.toString().padStart(2,'0')}
-              </span>
-            </div>
-            
-            <div className="flex gap-4">
-              <input 
-                type="number" min="0" max="23" 
-                value={controls.timer_hours || 0}
-                onChange={e => updateControl('timer_hours', +e.target.value)}
-                className="flex-1 p-4 rounded-2xl bg-white/20 border border-white/30 text-white text-xl font-bold text-center focus:outline-none focus:ring-4 focus:ring-emerald-500/50 transition-all"
-                placeholder="Ч"
-              />
-              <div className="text-2xl font-black text-white/50 self-center">:</div>
-              <input 
-                type="number" min="0" max="59" 
-                value={controls.timer_minutes || 30}
-                onChange={e => updateControl('timer_minutes', +e.target.value)}
-                className="flex-1 p-4 rounded-2xl bg-white/20 border border-white/30 text-white text-xl font-bold text-center focus:outline-none focus:ring-4 focus:ring-emerald-500/50 transition-all"
-                placeholder="Мин"
-              />
-            </div>
+                ⏰ Таймер: <span className="font-mono text-2xl font-black text-emerald-400">
+                  {timerDisplay}
+                </span>
+              </div>
+
+              <div className="flex gap-4">
+                <input 
+                  type="number" 
+                  min="0" max="23" 
+                  value={controls.timer_hours ?? ''}                // <-- show empty when null
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    updateControl('timer_hours', isNaN(val) ? null : val);
+                  }}
+                  className="flex-1 p-4 rounded-2xl bg-white/20 border border-white/30 text-white text-xl font-bold text-center focus:outline-none focus:ring-4 focus:ring-emerald-500/50 transition-all"
+                  placeholder="Ч"
+                />
+                <div className="text-2xl font-black text-white/50 self-center">:</div>
+                <input 
+                  type="number" 
+                  min="0" max="59" 
+                  value={controls.timer_minutes ?? ''}               // <-- show empty when null
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    updateControl('timer_minutes', isNaN(val) ? null : val);
+                  }}
+                  className="flex-1 p-4 rounded-2xl bg-white/20 border border-white/30 text-white text-xl font-bold text-center focus:outline-none focus:ring-4 focus:ring-emerald-500/50 transition-all"
+                  placeholder="Мин"
+                />
+              </div>
           </div>
 
           {/* LED */}
@@ -247,19 +322,16 @@ useEffect(() => {
           </div>
 
           
+           {/* ✅ ЗУММЕР - ИМПУЛЬСНАЯ КНОПКА */}
           <div className="bg-white/10 backdrop-blur-xl p-8 rounded-3xl border border-white/20 shadow-2xl">
             <h3 className="text-2xl font-black bg-gradient-to-r from-red-400 to-rose-500 bg-clip-text text-transparent mb-8">
-              🔊
+              🔊 Зуммер
             </h3>
             <button 
-              className={`w-full p-8 rounded-3xl text-2xl font-black transition-all duration-300 transform ${
-                controls.buzzer
-                  ? 'bg-gradient-to-r from-red-500 to-rose-600 shadow-2xl shadow-red-500/50 hover:scale-105 hover:shadow-3xl' 
-                  : 'bg-gray-700/50 hover:bg-gray-600/50 shadow-xl hover:shadow-2xl'
-              } text-white`}
-              onClick={() => updateControl('buzzer', !controls.buzzer)}
+              className="w-full p-8 rounded-3xl text-2xl font-black transition-all duration-300 transform bg-gradient-to-r from-red-500 to-rose-600 shadow-2xl shadow-red-500/50 hover:scale-105 hover:shadow-3xl hover:from-red-400 hover:to-rose-500 text-white"
+              onClick={playBeepOnce}
             >
-              {controls.buzzer ? '🔇 ВЫКЛЮЧИТЬ' : '🔊 ВКЛЮЧИТЬ'}
+              🎵 ИГРАТЬ BEEP
             </button>
           </div>
         </div>
